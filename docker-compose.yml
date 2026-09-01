@@ -1,0 +1,40 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: app
+      POSTGRES_PASSWORD: app_password
+      POSTGRES_DB: app
+    ports:
+      - "5432:5432"
+    volumes:
+      - acme-leave-manager_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U app -d app"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build: ./backend
+    environment:
+      DATABASE_URL: "postgresql://app:app_password@postgres:5432/app?schema=public"
+      PORT: 4000
+      JWT_SECRET: "change-me-in-production"
+    ports:
+      - "4000:4000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  web:
+    build: ./frontend
+    environment:
+      VITE_API_URL: "http://localhost:4000"
+    ports:
+      - "5173:5173"
+    depends_on:
+      - api
+
+volumes:
+  acme-leave-manager_postgres_data:
